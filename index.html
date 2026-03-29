@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTS Partner Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f3f4f6; --white: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); }
+        
+        /* --- LOGIN SCREEN STYLES --- */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f3f4f6; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        .login-box h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .login-btn { width: 100%; background: var(--primary); color: white; padding: 12px; border: none; font-size: 1rem; cursor: pointer; border-radius: 5px; transition: background 0.2s; margin-top: 10px; }
+        .login-btn:hover { background: #1e40af; }
+
+        /* Notification Board */
+        #notification-board { background: #1e293b; color: white; padding: 10px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 100; overflow: hidden; white-space: nowrap; height: 40px; display: flex; align-items: center; }
+        .ticker-wrap { width: 100%; overflow: hidden; }
+        .ticker-item { display: inline-block; padding: 0 2rem; animation: ticker 20s linear infinite; }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* Container */
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+        h1 { text-align: center; color: #333; }
+
+        /* Item Grid */
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        
+        /* Item Card */
+        .card { background: var(--white); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-5px); }
+        .card-img { width: 100%; height: 200px; object-fit: cover; cursor: pointer; background: #ddd; }
+        .card-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+        .card-title { font-size: 1.2rem; margin: 0 0 10px; color: var(--primary); cursor: pointer; font-weight: bold; }
+        .card-price { font-size: 1.1rem; color: #059669; font-weight: bold; margin-bottom: 10px; }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 10px; align-self: flex-start; }
+        .status-Available { background: #d1fae5; color: #065f46; }
+        .status-Pending { background: #fef3c7; color: #92400e; }
+        
+        .btn-group { margin-top: auto; display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; text-align: center; text-decoration: none; font-size: 0.9rem; }
+        .btn-info { background: var(--primary); color: white; }
+        .btn-msg { background: #0084ff; color: white; }
+
+        /* Pagination */
+        .pagination { display: flex; justify-content: center; gap: 10px; margin: 30px 0; }
+        .pagination button { padding: 8px 16px; cursor: pointer; background: #e5e7eb; border: none; border-radius: 4px; }
+        .pagination button:hover { background: #d1d5db; }
+
+        /* --- MODAL UPDATES FOR PC/MOBILE FIT AND SCROLLING --- */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { 
+            background: white; 
+            width: 95%; /* 95% ensures it fits nicely on narrow phone screens */
+            max-width: 600px; /* Limits size on large PC monitors */
+            max-height: 90vh; /* Prevents modal from being taller than the screen */
+            border-radius: 10px; 
+            border: 2px solid #e5e7eb; /* Fixed clean border */
+            
+            /* Scrolling Logic */
+            overflow-y: auto;  /* ALLOW scroll up and down */
+            overflow-x: hidden; /* STRICTLY PREVENT scroll left and right */
+            
+            padding: 20px; 
+            position: relative; 
+            box-sizing: border-box; /* Ensures padding doesn't break the width */
+        }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #333; z-index: 10; }
+        
+        /* Carousel */
+        .carousel { position: relative; width: 100%; height: 300px; background: #f3f4f6; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; }
+        .carousel img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 15px; cursor: pointer; font-size: 18px; z-index: 5; }
+        .prev-btn { left: 0; } .next-btn { right: 0; }
+        
+        /* Modal Description */
+        #modal-desc {
+            white-space: pre-wrap;
+            word-wrap: break-word; /* Forces long unbroken words to drop to the next line */
+            overflow-wrap: break-word;
+            margin-top: 15px;
+            color: #444;
+            line-height: 1.6;
+            padding: 15px;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+
+        /* App Interface hidden by default */
+        #app-interface { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>Partner Login</h2>
+            <input type="email" id="login-email" placeholder="Email Address">
+            <input type="password" id="login-pass" placeholder="Password">
+            <button id="login-btn" class="login-btn" onclick="handleLogin()">Enter Portal</button>
+            <p id="login-msg" style="color:red; margin-top:10px; font-size: 0.9rem;"></p>
+        </div>
+    </div>
+
+    <div id="app-interface">
+        <div id="notification-board">
+            <div class="ticker-wrap" id="ticker-content">Loading notifications...</div>
+        </div>
+
+        <div class="container">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>BTS Partner Portal</h1>
+                <button onclick="handleLogout()" style="padding:5px 10px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer;">Logout</button>
+            </div>
+            
+            <div id="item-grid" class="item-grid">
+                </div>
+
+            <div class="pagination">
+                <button id="prevBtn" onclick="changePage(-1)">Previous</button>
+                <span id="pageIndicator" style="align-self: center;">Page 1</span>
+                <button id="nextBtn" onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div class="carousel">
+                <button class="carousel-btn prev-btn" onclick="slidePhoto(-1)">&#10094;</button>
+                <img id="modal-img" src="" alt="Item Photo">
+                <button class="carousel-btn next-btn" onclick="slidePhoto(1)">&#10095;</button>
+            </div>
+            <h2 id="modal-title"></h2>
+            <h3 id="modal-price" style="color:#059669;"></h3>
+            <span id="modal-status" class="status-badge"></span>
+            
+            <p id="modal-desc"></p>
+            
+            <a id="modal-link" href="#" target="_blank" style="display:block; margin-top:20px; color:white; background:#2563eb; padding:10px; text-align:center; text-decoration:none; border-radius:5px;">Visit Web Page</a>
+        </div>
+    </div>
+
+    <script>
+        // --- SECURITY UTILITY: XSS PROTECTION ---
+        const escapeHTML = (str) => {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        };
+
+        // --- URL SANITIZATION ---
+        const sanitizeURL = (url) => {
+            if (!url) return '#';
+            // Only allow safe HTTP/HTTPS links. Blocks 'javascript:' and 'data:' URIs.
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            return '#'; 
+        };
+
+        // --- 1. CONFIGURATION ---
+        
+        // PROJECT A: DATA (Items & Notifs)
+        const URL_DATA = 'https://hrmjmqpawzjesyeirevx.supabase.co';
+        const KEY_DATA = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhybWptcXBhd3pqZXN5ZWlyZXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMzEwODMsImV4cCI6MjA4NTkwNzA4M30._tOvnOtsOXLantWDqKy4qr53RU83NpCrPoGYVJB1ph8';
+        const dataClient = supabase.createClient(URL_DATA, KEY_DATA);
+
+        // PROJECT B: AUTH (Login & Suspension Check)
+        const URL_AUTH = 'https://gozyvbieoweqbebxqsja.supabase.co';
+        const KEY_AUTH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvenl2Ymllb3dlcWJlYnhxc2phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NjE3MTYsImV4cCI6MjA4NDIzNzcxNn0.OerZpwDk7BPUti7a-oLUwUYIEKIALeH5uS6HUabfkoo';
+        const authClient = supabase.createClient(URL_AUTH, KEY_AUTH);
+
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let currentPhotos = [];
+        let photoIndex = 0;
+
+        // --- 2. SECURITY & AUTH LOGIC ---
+
+        window.onload = async () => {
+            const { data: { session } } = await authClient.auth.getSession();
+            
+            if (session) {
+                const { data: profile, error } = await authClient
+                    .from('profiles')
+                    .select('status')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (!error && profile && profile.status !== 'SUSPENDED') {
+                    showPortal();
+                } else {
+                    alert("Account Suspended or Not Found.");
+                    await authClient.auth.signOut();
+                }
+            }
+        };
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-pass').value;
+            const msg = document.getElementById('login-msg');
+            const btn = document.getElementById('login-btn');
+
+            if (!email || !password) {
+                msg.innerText = "Please enter email and password.";
+                return;
+            }
+
+            msg.innerText = "Verifying...";
+            btn.disabled = true;
+
+            const { data, error } = await authClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (error) {
+                msg.innerText = "Access Denied: " + error.message;
+                btn.disabled = false;
+                return;
+            }
+
+            const { data: profile, error: profileError } = await authClient
+                .from('profiles')
+                .select('status')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profileError || !profile || profile.status === 'SUSPENDED') {
+                msg.innerText = "Access Denied: Account is suspended.";
+                await authClient.auth.signOut();
+                btn.disabled = false;
+                return;
+            }
+
+            msg.innerText = "Success!";
+            showPortal();
+        }
+
+        async function handleLogout() {
+            await authClient.auth.signOut();
+            location.reload();
+        }
+
+        function showPortal() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-interface').style.display = 'block';
+            
+            fetchNotifications();
+            fetchItems();
+        }
+
+        // --- 3. DATA FETCHING ---
+
+        async function fetchNotifications() {
+            const { data, error } = await dataClient.from('notifications').select('*').order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error("Notif Error:", error);
+                document.getElementById('ticker-content').innerHTML = "Welcome to BTS Partner Portal";
+                return;
+            }
+
+            if (data && data.length > 0) {
+                const text = data.map(n => escapeHTML(n.message)).join('  ✦  ');
+                document.getElementById('ticker-content').innerHTML = `<div class="ticker-item">${text}</div>`;
+            } else {
+                document.getElementById('ticker-content').innerHTML = `<div class="ticker-item">Welcome to BTS Business Partner Portal</div>`;
+            }
+        }
+
+        async function fetchItems() {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage - 1;
+
+            const { data, count, error } = await dataClient
+                .from('items')
+                .select('*', { count: 'exact' })
+                .range(start, end)
+                .order('created_at', { ascending: false });
+
+            if (error) { console.error(error); return; }
+
+            const grid = document.getElementById('item-grid');
+            grid.innerHTML = '';
+
+            if (data.length === 0) {
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No items found.</p>';
+            }
+
+            data.forEach(item => {
+                const thumb = (item.photos && item.photos.length > 0) ? item.photos[0] : 'https://via.placeholder.com/300?text=No+Image';
+                
+                const displayAmount = item.amount 
+                    ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(item.amount) 
+                    : 'Contact for Price';
+
+                const safeName = escapeHTML(item.name);
+                const safeStatus = escapeHTML(item.status);
+                const safeThumb = escapeHTML(thumb);
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                card.innerHTML = `
+                    <img src="${safeThumb}" class="card-img" alt="Photo of ${safeName}">
+                    <div class="card-body">
+                        <div class="card-title">${safeName}</div>
+                        <div class="status-badge status-${safeStatus}">${safeStatus}</div>
+                        <div class="card-price">${displayAmount}</div>
+                        <div class="btn-group">
+                            <button class="btn btn-info view-info-btn">View more details</button>
+                            <a href="https://m.me/61578341193853" target="_blank" class="btn btn-msg">Send Message</a>
+                        </div>
+                    </div>
+                `;
+
+                const triggerModal = () => openModal(item);
+                
+                card.querySelector('.card-img').addEventListener('click', triggerModal);
+                card.querySelector('.card-title').addEventListener('click', triggerModal);
+                card.querySelector('.view-info-btn').addEventListener('click', triggerModal);
+
+                grid.appendChild(card);
+            });
+
+            document.getElementById('pageIndicator').innerText = `Page ${currentPage}`;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = (data.length < itemsPerPage);
+        }
+
+        function changePage(dir) {
+            currentPage += dir;
+            fetchItems();
+        }
+
+        // --- 4. MODAL FUNCTIONS ---
+        function openModal(item) {
+            currentPhotos = item.photos || [];
+            photoIndex = 0;
+            
+            document.getElementById('modal-title').innerText = item.name;
+            
+            const displayAmount = item.amount 
+                    ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(item.amount) 
+                    : 'Contact for Price';
+            document.getElementById('modal-price').innerText = displayAmount;
+            
+            document.getElementById('modal-status').innerText = item.status;
+            document.getElementById('modal-status').className = `status-badge status-${item.status}`;
+            document.getElementById('modal-desc').innerText = item.description || "No description provided.";
+            
+            const linkEl = document.getElementById('modal-link');
+            if(item.link) {
+                linkEl.style.display = 'block';
+                // USE THE SANITIZER HERE
+                linkEl.href = sanitizeURL(item.link); 
+            } else {
+                linkEl.style.display = 'none';
+            }
+
+            updateModalPhoto();
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function slidePhoto(dir) {
+            if(currentPhotos.length === 0) return;
+            photoIndex += dir;
+            if(photoIndex >= currentPhotos.length) photoIndex = 0;
+            if(photoIndex < 0) photoIndex = currentPhotos.length - 1;
+            updateModalPhoto();
+        }
+
+        function updateModalPhoto() {
+            const img = document.getElementById('modal-img');
+            if (currentPhotos.length > 0) {
+                img.src = currentPhotos[photoIndex];
+            } else {
+                img.src = 'https://via.placeholder.com/600?text=No+Photos';
+            }
+        }
+
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('modal')) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
