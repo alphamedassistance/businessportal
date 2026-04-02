@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binary Team Strategy (BTS) App Partner Portal</title>
+    <title>Binary Team Strategy (BTS) App Business Portal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #2563eb; --bg: #f3f4f6; --white: #ffffff; }
@@ -12,7 +12,7 @@
         /* --- LOGIN SCREEN STYLES --- */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f3f4f6; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 300px; text-align: center; }
-        .login-box h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
+        .login-box h2 { margin-top: 0; color: #333; margin-bottom: 20px; font-size: 1.5rem; }
         .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
         .login-btn { width: 100%; background: var(--primary); color: white; padding: 12px; border: none; font-size: 1rem; cursor: pointer; border-radius: 5px; transition: background 0.2s; margin-top: 10px; }
         .login-btn:hover { background: #1e40af; }
@@ -26,7 +26,7 @@
         /* Container */
         .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
-        /* --- NEW: ELEGANT PORTAL HEADER STYLES --- */
+        /* --- ELEGANT PORTAL HEADER STYLES --- */
         .portal-header {
             position: relative;
             text-align: center;
@@ -148,7 +148,7 @@
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>Partner Login</h2>
+            <h2>Business Portal Login</h2>
             <input type="email" id="login-email" placeholder="Email Address">
             <input type="password" id="login-pass" placeholder="Password">
             <button id="login-btn" class="login-btn" onclick="handleLogin()">Enter Portal</button>
@@ -163,7 +163,7 @@
 
         <div class="container">
             <div class="portal-header">
-                <h1>Binary Team Strategy (BTS) App Partner Portal</h1>
+                <h1>Binary Team Strategy (BTS) App Business Portal</h1>
                 <button onclick="handleLogout()" class="logout-btn">Logout</button>
             </div>
             
@@ -315,7 +315,7 @@
             
             if (error) {
                 console.error("Notif Error:", error);
-                document.getElementById('ticker-content').innerHTML = "Welcome to Binary Team Strategy (BTS) App Partner Portal";
+                document.getElementById('ticker-content').innerHTML = "Welcome to Binary Team Strategy (BTS) App Business Portal";
                 return;
             }
 
@@ -323,7 +323,7 @@
                 const text = data.map(n => escapeHTML(n.message)).join('  ✦  ');
                 document.getElementById('ticker-content').innerHTML = `<div class="ticker-item">${text}</div>`;
             } else {
-                document.getElementById('ticker-content').innerHTML = `<div class="ticker-item">Welcome to BTS Business Partner Portal</div>`;
+                document.getElementById('ticker-content').innerHTML = `<div class="ticker-item">Welcome to BTS Business Portal</div>`;
             }
         }
 
